@@ -5,6 +5,18 @@ VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IOCPNet", "IOCPNet\IOCPNet.csproj", "{D470FB49-2D5A-4B2C-83D6-0596859B33EC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{9A94E3B8-510F-4D94-A8D7-39008732CA7C}"
+	ProjectSection(SolutionItems) = preProject
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IOCPNet.ProtocolInterface", "IOCPNet.ProtocolInterface\IOCPNet.ProtocolInterface.csproj", "{FE9B322A-5375-4E98-B279-8117731E6D52}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IOCPNet.UnitTest", "IOCPNet.UnitTest\IOCPNet.UnitTest.csproj", "{02204F02-B3CD-4012-87A1-A5767D8903FF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IOCPNet.WinTestTool", "IOCPNet.WinTestTool\IOCPNet.WinTestTool.csproj", "{CB7F6035-0163-4CE5-84DC-4C95B45FD9F7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +27,18 @@ Global
 		{D470FB49-2D5A-4B2C-83D6-0596859B33EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D470FB49-2D5A-4B2C-83D6-0596859B33EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D470FB49-2D5A-4B2C-83D6-0596859B33EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE9B322A-5375-4E98-B279-8117731E6D52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE9B322A-5375-4E98-B279-8117731E6D52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE9B322A-5375-4E98-B279-8117731E6D52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE9B322A-5375-4E98-B279-8117731E6D52}.Release|Any CPU.Build.0 = Release|Any CPU
+		{02204F02-B3CD-4012-87A1-A5767D8903FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{02204F02-B3CD-4012-87A1-A5767D8903FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{02204F02-B3CD-4012-87A1-A5767D8903FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{02204F02-B3CD-4012-87A1-A5767D8903FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB7F6035-0163-4CE5-84DC-4C95B45FD9F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB7F6035-0163-4CE5-84DC-4C95B45FD9F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB7F6035-0163-4CE5-84DC-4C95B45FD9F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB7F6035-0163-4CE5-84DC-4C95B45FD9F7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
