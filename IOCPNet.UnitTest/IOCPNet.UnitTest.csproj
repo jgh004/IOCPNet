@@ -7,7 +7,7 @@
     <ProjectGuid>{02204F02-B3CD-4012-87A1-A5767D8903FF}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>IOCPNet.UnitTest</RootNamespace>
+    <RootNamespace>ITnmg.IOCPNet.UnitTest</RootNamespace>
     <AssemblyName>IOCPNet.UnitTest</AssemblyName>
     <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

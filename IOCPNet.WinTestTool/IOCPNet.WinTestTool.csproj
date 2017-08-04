@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{CB7F6035-0163-4CE5-84DC-4C95B45FD9F7}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>IOCPNet.WinTestTool</RootNamespace>
+    <RootNamespace>ITnmg.IOCPNet.WinTestTool</RootNamespace>
     <AssemblyName>IOCPNet.WinTestTool</AssemblyName>
     <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -92,6 +92,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IOCPNet\IOCPNet.csproj">
+      <Project>{d470fb49-2d5a-4b2c-83d6-0596859b33ec}</Project>
+      <Name>IOCPNet</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
