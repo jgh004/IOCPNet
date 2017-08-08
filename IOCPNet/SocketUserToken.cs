@@ -57,7 +57,7 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// 获取缓存数据处理对象(应用层协议)
 		/// </summary>
-		public ISocketProtocol BufferProcess
+		public ISocketProtocol SocketProtocol
 		{
 			get;
 			private set;
@@ -68,14 +68,11 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// 初始化 SocketUserToken 实例
 		/// </summary>
-		public SocketUserToken( ISocketProtocol bufferProcess, int singleBufferMaxSize )
+		/// <param name="socketProtocol"></param>
+		/// <param name="singleBufferMaxSize"></param>
+		public SocketUserToken( ISocketProtocol socketProtocol, int singleBufferMaxSize )
 		{
-			if ( bufferProcess == null )
-			{
-				throw new ArgumentNullException( "bufferProcess" );
-			}
-			
-			BufferProcess = bufferProcess;
+			SocketProtocol = socketProtocol ?? throw new ArgumentNullException( "socketProtocol" );
 			bufferManager = BufferManager.CreateBufferManager( 2, singleBufferMaxSize );
 		}
 
@@ -89,6 +86,9 @@ namespace ITnmg.IOCPNet
 			//BufferProcess.Decoder( ReceiveArgs.Buffer, ReceiveArgs.BytesTransferred );
 		}
 
+		/// <summary>
+		/// 处理要发送的数据
+		/// </summary>
 		public void ProcessSend()
 		{
 		}

@@ -105,7 +105,7 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// 获取 Socket 数据处理对象
 		/// </summary>
-		public ISocketProtocol BufferProcess
+		public ISocketProtocol SocketProtocol
 		{
 			get;
 			protected set;
@@ -120,17 +120,19 @@ namespace ITnmg.IOCPNet
 		{
 		}
 
-
+		
 
 		/// <summary>
 		/// 初始化管理
 		/// </summary>
 		/// <param name="maxConnectionCount">允许的最大连接数</param>
 		/// <param name="initConnectionResourceCount">启动时初始化多少个连接的资源</param>
+		/// <param name="socketProtocol">socket应用层协议</param>
 		/// <param name="singleBufferMaxSize">每个 socket 读写缓存最大字节数, 默认为8k</param>
 		/// <param name="sendTimeOut">socket 发送超时时长, 以毫秒为单位</param>
 		/// <param name="receiveTimeOut">socket 接收超时时长, 以毫秒为单位</param>
-		public virtual async Task InitAsync( int maxConnectionCount, int initConnectionResourceCount, ISocketProtocol bufferProcess, int singleBufferMaxSize = 8 * 1024
+		/// <returns></returns>
+		public virtual async Task InitAsync( int maxConnectionCount, int initConnectionResourceCount, ISocketProtocol socketProtocol, int singleBufferMaxSize = 8 * 1024
 			, int sendTimeOut = 10000, int receiveTimeOut = 10000 )
 		{
 			maxConnCount = maxConnectionCount;
@@ -146,12 +148,11 @@ namespace ITnmg.IOCPNet
 				connectedEntityList = new ConcurrentDictionary<Guid, SocketUserToken>( Environment.ProcessorCount * 2, maxConnCount );
 				//读写分离, 每个socket连接需要2个SocketAsyncEventArgs.
 				saePool = new SocketAsyncEventArgsPool( initConnectionResourceCount * 2, SendAndReceiveArgsCompleted, singleBufferMaxSize );
-
 				userTokenPool = new ConcurrentStack<SocketUserToken>();
 
 				for ( int i = 0; i < initConnectionResourceCount; i++ )
 				{
-					SocketUserToken token = new SocketUserToken( bufferProcess, singleBufferMaxSize );
+					SocketUserToken token = new SocketUserToken( socketProtocol, singleBufferMaxSize );
 					token.Id = Guid.NewGuid();
 					token.ReceiveArgs = saePool.Pop();
 					token.SendArgs = saePool.Pop();
@@ -340,7 +341,7 @@ namespace ITnmg.IOCPNet
 			//等待10秒,如果有空余资源,接收连接,否则断开socket.
 			if ( semaphore.WaitOne( 10000 ) && !userTokenPool.TryPop( out token ) )
 			{
-				token = new SocketUserToken( BufferProcess, singleBufferMaxSize );
+				token = new SocketUserToken( SocketProtocol, singleBufferMaxSize );
 				token.Id = Guid.NewGuid();
 				token.ReceiveArgs = saePool.Pop();
 				token.SendArgs = saePool.Pop();

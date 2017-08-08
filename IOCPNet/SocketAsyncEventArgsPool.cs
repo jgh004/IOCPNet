@@ -32,7 +32,7 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// SocketAsyncEventArgs 缓存最大字节数
 		/// </summary>
-		private int singleMaxBufferSize;
+		private int singleBufferMaxSize;
 
 
 		/// <summary>
@@ -57,7 +57,7 @@ namespace ITnmg.IOCPNet
 		public SocketAsyncEventArgsPool( int capacity, EventHandler<SocketAsyncEventArgs> completed, int singleBufferMaxSize = 8 * 1024 )
 		{
 			socketAsyncCompleted = completed;
-			singleMaxBufferSize = singleBufferMaxSize;
+			this.singleBufferMaxSize = singleBufferMaxSize;
 			//缓存池大小与SocketAsyncEventArgs池大小相同,因为每个SocketAsyncEventArgs只用一个缓存
 			bufferManager = BufferManager.CreateBufferManager( singleBufferMaxSize * capacity, singleBufferMaxSize );
 			pool = new ConcurrentStack<SocketAsyncEventArgs>();
@@ -169,7 +169,7 @@ namespace ITnmg.IOCPNet
 		private SocketAsyncEventArgs TryCreateNew()
 		{
 			SocketAsyncEventArgs result = null;
-			var buffer = bufferManager.TakeBuffer( singleMaxBufferSize );
+			var buffer = bufferManager.TakeBuffer( singleBufferMaxSize );
 
 			if ( buffer != null )
 			{

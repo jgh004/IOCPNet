@@ -132,9 +132,9 @@ namespace ITnmg.IOCPNet
 			e.AcceptSocket = null;
 			e.UserToken = null;
 
-			if ( e.SocketError != SocketError.OperationAborted && this.listenSocket != null && !this.listenSocket.AcceptAsync( e ) )
+			if ( e.SocketError != SocketError.OperationAborted && listenSocket != null && !listenSocket.AcceptAsync( e ) )
 			{
-				AcceptArgs_Completed( this.listenSocket, e );
+				AcceptArgs_Completed( listenSocket, e );
 			}
 		}
 
