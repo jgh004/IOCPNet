@@ -38,14 +38,5 @@ namespace ITnmg.IOCPNet
 			get;
 			internal set;
 		}
-
-		/// <summary>
-		/// 获取当前已连接 Socket 数量
-		/// </summary>
-		public int ConnectedCount
-		{
-			get;
-			internal set;
-		}
 	}
 }

@@ -87,7 +87,7 @@ namespace ITnmg.IOCPNet
 		{
 			get
 			{
-				return this.connectedEntityList.Count;
+				return connectedEntityList.Count;
 			}
 		}
 
@@ -98,7 +98,7 @@ namespace ITnmg.IOCPNet
 		{
 			get
 			{
-				return this.maxConnCount;
+				return maxConnCount;
 			}
 		}
 
@@ -133,7 +133,7 @@ namespace ITnmg.IOCPNet
 		public virtual async Task InitAsync( int maxConnectionCount, int initConnectionResourceCount, ISocketProtocol bufferProcess, int singleBufferMaxSize = 8 * 1024
 			, int sendTimeOut = 10000, int receiveTimeOut = 10000 )
 		{
-			this.maxConnCount = maxConnectionCount;
+			maxConnCount = maxConnectionCount;
 			this.initConnectionResourceCount = initConnectionResourceCount;
 			this.singleBufferMaxSize = singleBufferMaxSize;
 			this.sendTimeOut = sendTimeOut;
@@ -141,60 +141,24 @@ namespace ITnmg.IOCPNet
 
 			await Task.Run( () =>
 			{
-				this.semaphore = new Semaphore( this.maxConnCount, this.maxConnCount );
+				semaphore = new Semaphore( maxConnCount, maxConnCount );
 				//设置初始线程数为cpu核数*2
-				this.connectedEntityList = new ConcurrentDictionary<Guid, SocketUserToken>( Environment.ProcessorCount * 2, this.maxConnCount );
+				connectedEntityList = new ConcurrentDictionary<Guid, SocketUserToken>( Environment.ProcessorCount * 2, maxConnCount );
 				//读写分离, 每个socket连接需要2个SocketAsyncEventArgs.
-				saePool = new SocketAsyncEventArgsPool( this.initConnectionResourceCount * 2, SendAndReceiveArgs_Completed, this.singleBufferMaxSize );
+				saePool = new SocketAsyncEventArgsPool( initConnectionResourceCount * 2, SendAndReceiveArgs_Completed, singleBufferMaxSize );
 
-				this.userTokenPool = new ConcurrentStack<SocketUserToken>();
+				userTokenPool = new ConcurrentStack<SocketUserToken>();
 
-				Parallel.For( 0, initConnectionResourceCount, i =>
+				for ( int i = 0; i < initConnectionResourceCount; i++ )
 				{
 					SocketUserToken token = new SocketUserToken( bufferProcess, singleBufferMaxSize );
 					token.Id = Guid.NewGuid();
 					token.ReceiveArgs = saePool.Pop();
 					token.SendArgs = saePool.Pop();
-					this.userTokenPool.Push( token );
-				} );
+					userTokenPool.Push( token );
+				}
 			} );
 		}
-
-
-
-		/// <summary>
-		/// 引发 Error 事件
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		protected virtual void OnError( object sender, Exception e )
-		{
-			if ( this.ErrorEvent != null )
-			{
-				this.ErrorEvent( sender, e );
-			}
-		}
-
-		/// <summary>
-		/// 引发 ConnectedStatusChangeEvent 事件
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="tokenId"></param>
-		/// <param name="status"></param>
-		/// <param name="error"></param>
-		protected virtual void OnConnectedStatusChange( object sender, Guid tokenId, bool status, SocketError? error )
-		{
-			if ( this.ConnectedStatusChangeEvent != null )
-			{
-				var arg = new SocketStatusChangeArgs();
-				arg.UserTokenId = tokenId;
-				arg.Status = status;
-				arg.Error = error;
-				arg.ConnectedCount = this.connectedEntityList.Count;
-				this.ConnectedStatusChangeEvent( sender, arg );
-			}
-		}
-
 
 
 		/// <summary>
@@ -247,10 +211,8 @@ namespace ITnmg.IOCPNet
 
 			try
 			{
-				//等待10秒,如果有空余资源,接收连接,否则断开socket.
-				if ( semaphore.WaitOne( 10000 ) )
+				if ( GetUserToken( out result ) )
 				{
-					result = GetUserToken();
 					result.CurrentSocket = s;
 					result.ReceiveArgs.UserToken = result;
 					result.SendArgs.UserToken = result;
@@ -372,17 +334,21 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// 获取一个 userToken 资源
 		/// </summary>
+		/// <param name="token"></param>
 		/// <returns></returns>
-		protected virtual SocketUserToken GetUserToken()
+		protected virtual bool GetUserToken( out SocketUserToken token )
 		{
-			SocketUserToken result = null;
+			bool result = false;
+			token = null;
 
-			if ( !userTokenPool.TryPop( out result ) )
+			//等待10秒,如果有空余资源,接收连接,否则断开socket.
+			if ( semaphore.WaitOne( 10000 ) && !userTokenPool.TryPop( out token ) )
 			{
-				result = new SocketUserToken( BufferProcess, singleBufferMaxSize );
-				result.Id = Guid.NewGuid();
-				result.ReceiveArgs = saePool.Pop();
-				result.SendArgs = saePool.Pop();
+				token = new SocketUserToken( BufferProcess, singleBufferMaxSize );
+				token.Id = Guid.NewGuid();
+				token.ReceiveArgs = saePool.Pop();
+				token.SendArgs = saePool.Pop();
+				result = true;
 			}
 
 			return result;
@@ -409,20 +375,17 @@ namespace ITnmg.IOCPNet
 		/// 关闭已连接 socket 集合
 		/// </summary>
 		/// <returns></returns>
-		protected virtual async Task CloseConnectList()
+		protected virtual void CloseConnectList()
 		{
-			await Task.Run( () =>
+			if ( connectedEntityList != null )
 			{
-				if ( this.connectedEntityList != null )
+				foreach ( var kv in connectedEntityList )
 				{
-					connectedEntityList.AsParallel().ForAll( f =>
-					{
-						FreeUserToken( f.Value );
-					} );
-
-					this.connectedEntityList.Clear();
+					FreeUserToken( kv.Value );
 				}
-			} );
+
+				connectedEntityList.Clear();
+			}
 		}
 
 		/// <summary>
@@ -448,5 +411,37 @@ namespace ITnmg.IOCPNet
 				s = null;
 			}
 		}
+
+
+
+		/// <summary>
+		/// 引发 Error 事件
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
+		protected virtual void OnError( object sender, Exception e )
+		{
+			ErrorEvent?.BeginInvoke( sender, e, null, null );
+		}
+
+		/// <summary>
+		/// 引发 ConnectedStatusChangeEvent 事件
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="tokenId"></param>
+		/// <param name="status"></param>
+		/// <param name="error"></param>
+		protected virtual void OnConnectedStatusChange( object sender, Guid tokenId, bool status, SocketError? error )
+		{
+			if ( ConnectedStatusChangeEvent != null )
+			{
+				var arg = new SocketStatusChangeArgs();
+				arg.UserTokenId = tokenId;
+				arg.Status = status;
+				arg.Error = error;
+				ConnectedStatusChangeEvent.BeginInvoke( sender, arg, null, null );
+			}
+		}
+
 	}
 }

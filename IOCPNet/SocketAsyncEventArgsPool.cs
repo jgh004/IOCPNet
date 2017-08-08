@@ -168,21 +168,21 @@ namespace ITnmg.IOCPNet
 		/// <returns></returns>
 		private SocketAsyncEventArgs TryCreateNew()
 		{
-			SocketAsyncEventArgs item = null;
+			SocketAsyncEventArgs result = null;
 			var buffer = bufferManager.TakeBuffer( singleMaxBufferSize );
 
 			if ( buffer != null )
 			{
-				item = new SocketAsyncEventArgs();
-				item.SetBuffer( buffer, 0, buffer.Length );
+				result = new SocketAsyncEventArgs();
+				result.SetBuffer( buffer, 0, buffer.Length );
 
 				if ( socketAsyncCompleted != null )
 				{
-					item.Completed += socketAsyncCompleted;
+					result.Completed += socketAsyncCompleted;
 				}
 			}
 
-			return item;
+			return result;
 		}
 	}
 }
