@@ -145,7 +145,7 @@ namespace ITnmg.IOCPNet
 				//设置初始线程数为cpu核数*2
 				connectedEntityList = new ConcurrentDictionary<Guid, SocketUserToken>( Environment.ProcessorCount * 2, maxConnCount );
 				//读写分离, 每个socket连接需要2个SocketAsyncEventArgs.
-				saePool = new SocketAsyncEventArgsPool( initConnectionResourceCount * 2, SendAndReceiveArgs_Completed, singleBufferMaxSize );
+				saePool = new SocketAsyncEventArgsPool( initConnectionResourceCount * 2, SendAndReceiveArgsCompleted, singleBufferMaxSize );
 
 				userTokenPool = new ConcurrentStack<SocketUserToken>();
 
@@ -205,13 +205,11 @@ namespace ITnmg.IOCPNet
 		/// </summary>
 		/// <param name="s"></param>
 		/// <returns>返回 userToken</returns>
-		protected virtual SocketUserToken ToConnCompletedSuccess( Socket s )
+		protected virtual void ConnCompletedSuccess( Socket s )
 		{
-			SocketUserToken result = null;
-
 			try
 			{
-				if ( GetUserToken( out result ) )
+				if ( GetUserToken( out SocketUserToken result ) )
 				{
 					result.CurrentSocket = s;
 					result.ReceiveArgs.UserToken = result;
@@ -221,12 +219,12 @@ namespace ITnmg.IOCPNet
 					{
 						if ( !result.CurrentSocket.ReceiveAsync( result.ReceiveArgs ) )
 						{
-							SendAndReceiveArgs_Completed( this, result.ReceiveArgs );
+							SendAndReceiveArgsCompleted( this, result.ReceiveArgs );
 						}
 
 						if ( !result.CurrentSocket.SendAsync( result.SendArgs ) )
 						{
-							SendAndReceiveArgs_Completed( this, result.SendArgs );
+							SendAndReceiveArgsCompleted( this, result.SendArgs );
 						}
 
 						//SocketError.Success 状态回传null, 表示没有异常
@@ -247,14 +245,12 @@ namespace ITnmg.IOCPNet
 				CloseSocket( s );
 				OnError( this, ex );
 			}
-
-			return result;
 		}
 
 		/// <summary>
 		/// 执行 socket 连接异常时的处理
 		/// </summary>
-		protected virtual void ToConnCompletedError( Socket s, SocketError error, SocketUserToken token )
+		protected virtual void ConnCompletedError( Socket s, SocketError error, SocketUserToken token )
 		{
 			try
 			{
@@ -275,7 +271,7 @@ namespace ITnmg.IOCPNet
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
-		protected virtual void SendAndReceiveArgs_Completed( object sender, SocketAsyncEventArgs e )
+		protected virtual void SendAndReceiveArgsCompleted( object sender, SocketAsyncEventArgs e )
 		{
 			var token = e.UserToken as SocketUserToken;
 
