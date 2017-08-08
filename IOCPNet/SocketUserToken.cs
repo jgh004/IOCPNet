@@ -55,7 +55,7 @@ namespace ITnmg.IOCPNet
 		}
 
 		/// <summary>
-		/// 获取缓存数据处理对象
+		/// 获取缓存数据处理对象(应用层协议)
 		/// </summary>
 		public ISocketProtocol BufferProcess
 		{

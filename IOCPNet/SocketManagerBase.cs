@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq.Expressions;
 using ITnmg.IOCPNet.ProtocolInterface;
+using System.Diagnostics;
 
 namespace ITnmg.IOCPNet
 {
@@ -17,6 +18,11 @@ namespace ITnmg.IOCPNet
 	/// </summary>
 	public abstract class SocketManagerBase
 	{
+		/// <summary>
+		/// 调试类型
+		/// </summary>
+		internal const string TraceCategory = "SocketManagerBase";
+
 		/// <summary>
 		/// SocketAsyncEventArgs 池
 		/// </summary>
@@ -241,8 +247,8 @@ namespace ITnmg.IOCPNet
 
 			try
 			{
-				//等待3秒,如果有空余资源,接收连接,否则断开socket.
-				if ( semaphore.WaitOne( 3000 ) )
+				//等待10秒,如果有空余资源,接收连接,否则断开socket.
+				if ( semaphore.WaitOne( 10000 ) )
 				{
 					result = GetUserToken();
 					result.CurrentSocket = s;
@@ -267,7 +273,6 @@ namespace ITnmg.IOCPNet
 					else
 					{
 						FreeUserToken( result );
-						semaphore.Release();
 					}
 				}
 				else
@@ -291,7 +296,7 @@ namespace ITnmg.IOCPNet
 		{
 			try
 			{
-				FreeUserToken( RemoveUserToken( token ) );
+				FreeUserToken( token );
 			}
 			catch ( Exception ex )
 			{
@@ -328,12 +333,13 @@ namespace ITnmg.IOCPNet
 								}
 								catch ( Exception ex )
 								{
-									FreeUserToken( RemoveUserToken( token ) );
+									FreeUserToken( token );
+									Trace.WriteLine( "SendAndReceiveArgs_Completed:" + ex.ToString(), TraceCategory );
 								}
 							}
 							else //否则关闭连接,释放资源
 							{
-								FreeUserToken( RemoveUserToken( token ) );
+								FreeUserToken( token );
 							}
 						}
 						break;
@@ -347,18 +353,19 @@ namespace ITnmg.IOCPNet
 							catch ( Exception ex )
 							{
 								//否则关闭连接,释放资源
-								FreeUserToken( RemoveUserToken( token ) );
+								FreeUserToken( token );
+								Trace.WriteLine( "SendAndReceiveArgs_Completed:" + ex.ToString(), TraceCategory );
 							}
 						}
 						break;
 					default:
-						FreeUserToken( RemoveUserToken( token ) );
+						FreeUserToken( token );
 						break;
 				}
 			}
 			else
 			{
-				FreeUserToken( RemoveUserToken( token ) );
+				FreeUserToken( token );
 			}
 		}
 
@@ -389,31 +396,13 @@ namespace ITnmg.IOCPNet
 		{
 			if ( token != null )
 			{
+				connectedEntityList.TryRemove( token.Id, out SocketUserToken _ );
 				CloseSocket( token.CurrentSocket );
 				token.CurrentSocket = null;
 				userTokenPool.Push( token );
+				OnConnectedStatusChange( this, token.Id, false, null );
+				semaphore.Release();
 			}
-		}
-
-		/// <summary>
-		/// 从已连接集合中移除指定的 token
-		/// </summary>
-		/// <param name="token"></param>
-		/// <returns></returns>
-		protected virtual SocketUserToken RemoveUserToken( SocketUserToken token )
-		{
-			SocketUserToken result = null;
-
-			if ( token != null )
-			{
-				if ( connectedEntityList.TryRemove( token.Id, out result ) )
-				{
-					semaphore.Release();
-					OnConnectedStatusChange( this, token.Id, false, null );
-				}
-			}
-
-			return result;
 		}
 
 		/// <summary>
@@ -428,7 +417,7 @@ namespace ITnmg.IOCPNet
 				{
 					connectedEntityList.AsParallel().ForAll( f =>
 					{
-						FreeUserToken( RemoveUserToken( f.Value ) );
+						FreeUserToken( f.Value );
 					} );
 
 					this.connectedEntityList.Clear();
@@ -450,6 +439,7 @@ namespace ITnmg.IOCPNet
 				}
 				catch ( Exception ex )
 				{
+					Trace.WriteLine( "CloseSocket:" + ex.ToString(), TraceCategory );
 				}
 
 				//s.DisconnectAsync( true );
