@@ -17,12 +17,6 @@ namespace ITnmg.IOCPNet
 	public class SocketUserToken
 	{
 		/// <summary>
-		/// 缓存管理
-		/// </summary>
-		private BufferManager bufferManager;
-		
-
-		/// <summary>
 		/// 获取或设置唯一Id
 		/// </summary>
 		public Guid Id
@@ -73,7 +67,6 @@ namespace ITnmg.IOCPNet
 		public SocketUserToken( ISocketProtocol socketProtocol, int singleBufferMaxSize )
 		{
 			SocketProtocol = socketProtocol ?? throw new ArgumentNullException( "socketProtocol" );
-			bufferManager = BufferManager.CreateBufferManager( 2, singleBufferMaxSize );
 		}
 
 		
