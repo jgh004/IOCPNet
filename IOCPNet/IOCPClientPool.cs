@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using System.Text;
 
 namespace ITnmg.IOCPNet
@@ -11,6 +12,11 @@ namespace ITnmg.IOCPNet
     public class IOCPClientPool
 	{
 		/// <summary>
+		/// SocketAsyncEventArgs 池
+		/// </summary>
+		protected SocketAsyncEventArgsPool argsPool;
+
+		/// <summary>
 		/// IOCPClient 缓存集合
 		/// </summary>
 		protected ConcurrentStack<IOCPClient> pool;
@@ -20,8 +26,9 @@ namespace ITnmg.IOCPNet
 		/// 初始化池
 		/// </summary>
 		/// <param name="capacity">初始容量</param>
-		public IOCPClientPool( int capacity )
+		public IOCPClientPool( int capacity, SocketAsyncEventArgsPool saePool )
 		{
+			argsPool = saePool ?? throw new ArgumentNullException( "saePool" );
 			pool = new ConcurrentStack<IOCPClient>();
 
 			for ( int i = 0; i < capacity; i++ )
@@ -83,7 +90,14 @@ namespace ITnmg.IOCPNet
 		/// <returns></returns>
 		private IOCPClient CreateNew()
 		{
-			return new IOCPClient();
+			IOCPClient result = new IOCPClient();
+			result.Id = Guid.NewGuid();
+			result.ReceiveArgs = argsPool.Pop();
+			result.ReceiveArgs.UserToken = result;
+			result.SendArgs = argsPool.Pop();
+			result.SendArgs.UserToken = result;
+
+			return result;
 		}
 	}
 }

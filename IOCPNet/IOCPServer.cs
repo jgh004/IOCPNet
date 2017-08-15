@@ -67,7 +67,7 @@ namespace ITnmg.IOCPNet
 
 					if ( !listenSocket.AcceptAsync( args ) )
 					{
-						AcceptArgs_Completed( listenSocket, args );
+						AcceptArgs_Completed( null, args );
 					}
 
 					OnServerStateChange( this, true );
@@ -130,11 +130,10 @@ namespace ITnmg.IOCPNet
 
 			//监听下一个请求
 			e.AcceptSocket = null;
-			e.UserToken = null;
 
-			if ( e.SocketError != SocketError.OperationAborted && listenSocket != null && !listenSocket.AcceptAsync( e ) )
+			if ( listenSocket != null && !listenSocket.AcceptAsync( e ) )
 			{
-				AcceptArgs_Completed( listenSocket, e );
+				AcceptArgs_Completed( null, e );
 			}
 		}
 

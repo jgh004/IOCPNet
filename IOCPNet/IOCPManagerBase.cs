@@ -22,12 +22,7 @@ namespace ITnmg.IOCPNet
 		/// 调试类型
 		/// </summary>
 		internal const string TRACECATEGORY = "IOCPManagerBase";
-
-		/// <summary>
-		/// SocketAsyncEventArgs 池
-		/// </summary>
-		protected SocketAsyncEventArgsPool saePool;
-
+		
 		/// <summary>
 		/// IOCPClient 池
 		/// </summary>
@@ -66,7 +61,7 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// 已连接的集合
 		/// </summary>
-		protected ConcurrentDictionary<Guid, IOCPClient> connectedEntityList;
+		protected ConcurrentDictionary<Guid, IOCPClient> connectedClients;
 
 
 		/// <summary>
@@ -75,9 +70,9 @@ namespace ITnmg.IOCPNet
 		public event EventHandler<Exception> ErrorEvent;
 
 		/// <summary>
-		/// Socket 连接状态改变事件
+		/// 当有 Socket 连接进来或断开时状态变更事件
 		/// </summary>
-		public event EventHandler<IOCPClientStatusChangeArgs> ConnectedStatusChangeEvent;
+		public event EventHandler<IOCPClientStatusChangeArgs> ClientConnectedStatusChangeEvent;
 
 
 		/// <summary>
@@ -87,7 +82,7 @@ namespace ITnmg.IOCPNet
 		{
 			get
 			{
-				return connectedEntityList.Count;
+				return connectedClients.Count;
 			}
 		}
 
@@ -146,10 +141,10 @@ namespace ITnmg.IOCPNet
 			{
 				semaphore = new Semaphore( maxConnCount, maxConnCount );
 				//设置初始线程数为cpu核数*2
-				connectedEntityList = new ConcurrentDictionary<Guid, IOCPClient>( Environment.ProcessorCount * 2, maxConnCount );
+				connectedClients = new ConcurrentDictionary<Guid, IOCPClient>( Environment.ProcessorCount * 2, maxConnCount );
 				//读写分离, 每个socket连接需要2个SocketAsyncEventArgs.
-				saePool = new SocketAsyncEventArgsPool( initConnectionResourceCount * 2, SendAndReceiveArgsCompleted, singleBufferMaxSize );
-				iocpClientPool = new IOCPClientPool( initConnectionResourceCount );
+				var saePool = new SocketAsyncEventArgsPool( initConnectionResourceCount * 2, SendReceiveArgsCompleted, singleBufferMaxSize );
+				iocpClientPool = new IOCPClientPool( initConnectionResourceCount, saePool );
 			} );
 		}
 
@@ -202,30 +197,30 @@ namespace ITnmg.IOCPNet
 		{
 			try
 			{
-				if ( GetIOCPClient( out IOCPClient result ) )
+				if ( GetIOCPClient( out IOCPClient client ) )
 				{
-					result.CurrentSocket = s;
-					result.ReceiveArgs.UserToken = result;
-					result.SendArgs.UserToken = result;
+					client.CurrentSocket = s;
+					client.ReceiveArgs.UserToken = client;
+					client.SendArgs.UserToken = client;
 
-					if ( connectedEntityList.TryAdd( result.Id, result ) )
+					if ( connectedClients.TryAdd( client.Id, client ) )
 					{
-						if ( !result.CurrentSocket.ReceiveAsync( result.ReceiveArgs ) )
+						if ( !client.CurrentSocket.ReceiveAsync( client.ReceiveArgs ) )
 						{
-							SendAndReceiveArgsCompleted( this, result.ReceiveArgs );
+							SendReceiveArgsCompleted( null, client.ReceiveArgs );
 						}
 
-						if ( !result.CurrentSocket.SendAsync( result.SendArgs ) )
+						if ( !client.CurrentSocket.SendAsync( client.SendArgs ) )
 						{
-							SendAndReceiveArgsCompleted( this, result.SendArgs );
+							SendReceiveArgsCompleted( null, client.SendArgs );
 						}
 
 						//SocketError.Success 状态回传null, 表示没有异常
-						OnConnectedStatusChange( this, result.Id, true, null );
+						OnClientConnectedStatusChange( this, client.Id, true, null );
 					}
 					else
 					{
-						FreeUserToken( result );
+						FreeIOCPClient( client );
 					}
 				}
 				else
@@ -243,11 +238,11 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// 执行 socket 连接异常时的处理
 		/// </summary>
-		protected virtual void ConnCompletedError( Socket s, SocketError error, IOCPClient token )
+		protected virtual void ConnCompletedError( Socket s, SocketError error, IOCPClient client )
 		{
 			try
 			{
-				FreeUserToken( token );
+				FreeIOCPClient( client );
 			}
 			catch ( Exception ex )
 			{
@@ -264,80 +259,77 @@ namespace ITnmg.IOCPNet
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
-		protected virtual void SendAndReceiveArgsCompleted( object sender, SocketAsyncEventArgs e )
+		protected virtual void SendReceiveArgsCompleted( object sender, SocketAsyncEventArgs e )
 		{
-			var token = e.UserToken as IOCPClient;
+			var client = e.UserToken as IOCPClient;
 
 			if ( e.SocketError == SocketError.Success )
 			{
 				switch ( e.LastOperation )
 				{
 					case SocketAsyncOperation.Receive:
-						if ( token != null )
+						if ( client != null )
 						{
 							//读取数据大于0,说明连接正常
-							if ( token.ReceiveArgs.BytesTransferred > 0 )
+							if ( client.ReceiveArgs.BytesTransferred > 0 )
 							{
 								try
 								{
-									token.ProcessReceive();
+									client.ProcessReceive();
 								}
 								catch ( Exception ex )
 								{
-									FreeUserToken( token );
-									Trace.WriteLine( "SendAndReceiveArgs_Completed:" + ex.ToString(), TRACECATEGORY );
+									FreeIOCPClient( client );
+									Trace.WriteLine( "SendReceiveArgs_Completed:" + ex.ToString(), TRACECATEGORY );
 								}
 							}
 							else //否则关闭连接,释放资源
 							{
-								FreeUserToken( token );
+								FreeIOCPClient( client );
 							}
 						}
 						break;
 					case SocketAsyncOperation.Send:
-						if ( token != null )
+						if ( client != null )
 						{
 							try
 							{
-								token.ProcessSend();
+								client.ProcessSend();
 							}
 							catch ( Exception ex )
 							{
 								//否则关闭连接,释放资源
-								FreeUserToken( token );
-								Trace.WriteLine( "SendAndReceiveArgs_Completed:" + ex.ToString(), TRACECATEGORY );
+								FreeIOCPClient( client );
+								Trace.WriteLine( "SendReceiveArgs_Completed:" + ex.ToString(), TRACECATEGORY );
 							}
 						}
 						break;
 					default:
-						FreeUserToken( token );
+						FreeIOCPClient( client );
 						break;
 				}
 			}
 			else
 			{
-				FreeUserToken( token );
+				FreeIOCPClient( client );
 			}
 		}
 
 		/// <summary>
 		/// 获取一个 IOCPClient 资源
 		/// </summary>
-		/// <param name="token"></param>
+		/// <param name="client"></param>
 		/// <returns></returns>
-		protected virtual bool GetIOCPClient( out IOCPClient token )
+		protected virtual bool GetIOCPClient( out IOCPClient client )
 		{
 			bool result = false;
-			token = null;
+			client = null;
 
 			//等待10秒,如果有空余资源,接收连接,否则断开socket.
 			if ( semaphore.WaitOne( 10000 ) )
 			{
-				token = iocpClientPool.Pop();
-				token.Id = Guid.NewGuid();
-				token.SocketProtocol = SocketProtocol;
-				token.ReceiveArgs = saePool.Pop();
-				token.SendArgs = saePool.Pop();
+				client = iocpClientPool.Pop();
+				client.SocketProtocol = SocketProtocol;
 				result = true;
 			}
 
@@ -345,18 +337,18 @@ namespace ITnmg.IOCPNet
 		}
 
 		/// <summary>
-		/// 释放 token 资源, 将 token 放回池
+		/// 释放 IOCPClient 资源, 将 IOCPClient 放回池
 		/// </summary>
-		/// <param name="token">要释放的 token</param>
-		protected virtual void FreeUserToken( IOCPClient token )
+		/// <param name="client">要释放的 IOCPClient</param>
+		protected virtual void FreeIOCPClient( IOCPClient client )
 		{
-			if ( token != null )
+			if ( client != null )
 			{
-				connectedEntityList.TryRemove( token.Id, out IOCPClient _ );
-				CloseSocket( token.CurrentSocket );
-				token.CurrentSocket = null;
-				iocpClientPool.Push( token );
-				OnConnectedStatusChange( this, token.Id, false, null );
+				connectedClients.TryRemove( client.Id, out IOCPClient _ );
+				CloseSocket( client.CurrentSocket );
+				client.CurrentSocket = null;
+				iocpClientPool.Push( client );
+				OnClientConnectedStatusChange( this, client.Id, false, null );
 				semaphore.Release();
 			}
 		}
@@ -367,14 +359,14 @@ namespace ITnmg.IOCPNet
 		/// <returns></returns>
 		protected virtual void CloseConnectList()
 		{
-			if ( connectedEntityList != null )
+			if ( connectedClients != null )
 			{
-				foreach ( var kv in connectedEntityList )
+				foreach ( var kv in connectedClients )
 				{
-					FreeUserToken( kv.Value );
+					FreeIOCPClient( kv.Value );
 				}
 
-				connectedEntityList.Clear();
+				connectedClients.Clear();
 			}
 		}
 
@@ -414,21 +406,21 @@ namespace ITnmg.IOCPNet
 		}
 
 		/// <summary>
-		/// 引发 ConnectedStatusChangeEvent 事件
+		/// 引发 ClientConnectedStatusChangeEvent 事件
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="clientId"></param>
 		/// <param name="status"></param>
 		/// <param name="error"></param>
-		protected virtual void OnConnectedStatusChange( object sender, Guid clientId, bool status, SocketError? error )
+		protected virtual void OnClientConnectedStatusChange( object sender, Guid clientId, bool status, SocketError? error )
 		{
-			if ( ConnectedStatusChangeEvent != null )
+			if ( ClientConnectedStatusChangeEvent != null )
 			{
 				var arg = new IOCPClientStatusChangeArgs();
 				arg.ClientId = clientId;
 				arg.Status = status;
 				arg.Error = error;
-				ConnectedStatusChangeEvent.BeginInvoke( sender, arg, null, null );
+				ClientConnectedStatusChangeEvent.BeginInvoke( sender, arg, null, null );
 			}
 		}
 
