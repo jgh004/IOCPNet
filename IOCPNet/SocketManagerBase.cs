@@ -401,9 +401,8 @@ namespace ITnmg.IOCPNet
 				{
 					Trace.WriteLine( "CloseSocket:" + ex.ToString(), TraceCategory );
 				}
-
-				//s.DisconnectAsync( true );
-				//s.Close();
+				
+				s.Close();
 				s.Dispose();
 				s = null;
 			}
