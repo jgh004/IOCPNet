@@ -13,7 +13,7 @@ namespace ITnmg.IOCPNet
 	/// <summary>
 	/// IOCP服务端
 	/// </summary>
-	public class IOCPServer : SocketManagerBase
+	public class IOCPServer : IOCPManagerBase
 	{
 		/// <summary>
 		/// 监听用的 socket

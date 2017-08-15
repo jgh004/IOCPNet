@@ -8,14 +8,14 @@ using System.Threading.Tasks;
 namespace ITnmg.IOCPNet
 {
 	/// <summary>
-	/// Socket 连接状态变更事件参数
+	/// IOCPClient 连接状态变更事件参数
 	/// </summary>
-	public class SocketStatusChangeArgs : EventArgs
+	public class IOCPClientStatusChangeArgs : EventArgs
 	{
 		/// <summary>
-		/// 获取引发事件的 SocketUserToken Id
+		/// 获取引发事件的 IOCPClient Id
 		/// </summary>
-		public Guid UserTokenId
+		public Guid ClientId
 		{
 			get;
 			internal set;

@@ -14,14 +14,14 @@ using System.Diagnostics;
 namespace ITnmg.IOCPNet
 {
 	/// <summary>
-	/// IOCP Socket 服务端,客户端通用管理基类
+	/// IOCP 通用管理基类
 	/// </summary>
-	public abstract class SocketManagerBase
+	public abstract class IOCPManagerBase
 	{
 		/// <summary>
 		/// 调试类型
 		/// </summary>
-		internal const string TraceCategory = "SocketManagerBase";
+		internal const string TRACECATEGORY = "IOCPManagerBase";
 
 		/// <summary>
 		/// SocketAsyncEventArgs 池
@@ -77,7 +77,7 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// Socket 连接状态改变事件
 		/// </summary>
-		public event EventHandler<SocketStatusChangeArgs> ConnectedStatusChangeEvent;
+		public event EventHandler<IOCPClientStatusChangeArgs> ConnectedStatusChangeEvent;
 
 
 		/// <summary>
@@ -116,7 +116,7 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// 创建服务端实例
 		/// </summary>
-		public SocketManagerBase()
+		public IOCPManagerBase()
 		{
 		}
 
@@ -285,7 +285,7 @@ namespace ITnmg.IOCPNet
 								catch ( Exception ex )
 								{
 									FreeUserToken( token );
-									Trace.WriteLine( "SendAndReceiveArgs_Completed:" + ex.ToString(), TraceCategory );
+									Trace.WriteLine( "SendAndReceiveArgs_Completed:" + ex.ToString(), TRACECATEGORY );
 								}
 							}
 							else //否则关闭连接,释放资源
@@ -305,7 +305,7 @@ namespace ITnmg.IOCPNet
 							{
 								//否则关闭连接,释放资源
 								FreeUserToken( token );
-								Trace.WriteLine( "SendAndReceiveArgs_Completed:" + ex.ToString(), TraceCategory );
+								Trace.WriteLine( "SendAndReceiveArgs_Completed:" + ex.ToString(), TRACECATEGORY );
 							}
 						}
 						break;
@@ -392,7 +392,7 @@ namespace ITnmg.IOCPNet
 				}
 				catch ( Exception ex )
 				{
-					Trace.WriteLine( "CloseSocket:" + ex.ToString(), TraceCategory );
+					Trace.WriteLine( "CloseSocket:" + ex.ToString(), TRACECATEGORY );
 				}
 				
 				s.Close();
@@ -417,15 +417,15 @@ namespace ITnmg.IOCPNet
 		/// 引发 ConnectedStatusChangeEvent 事件
 		/// </summary>
 		/// <param name="sender"></param>
-		/// <param name="tokenId"></param>
+		/// <param name="clientId"></param>
 		/// <param name="status"></param>
 		/// <param name="error"></param>
-		protected virtual void OnConnectedStatusChange( object sender, Guid tokenId, bool status, SocketError? error )
+		protected virtual void OnConnectedStatusChange( object sender, Guid clientId, bool status, SocketError? error )
 		{
 			if ( ConnectedStatusChangeEvent != null )
 			{
-				var arg = new SocketStatusChangeArgs();
-				arg.UserTokenId = tokenId;
+				var arg = new IOCPClientStatusChangeArgs();
+				arg.ClientId = clientId;
 				arg.Status = status;
 				arg.Error = error;
 				ConnectedStatusChangeEvent.BeginInvoke( sender, arg, null, null );
