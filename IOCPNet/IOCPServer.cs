@@ -125,7 +125,7 @@ namespace ITnmg.IOCPNet
 			}
 			else
 			{
-				ConnCompletedError( e.AcceptSocket, e.SocketError, e.UserToken as SocketUserToken );
+				ConnCompletedError( e.AcceptSocket, e.SocketError, e.UserToken as IOCPClient );
 			}
 
 			//监听下一个请求

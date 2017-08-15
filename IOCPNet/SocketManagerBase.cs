@@ -29,9 +29,9 @@ namespace ITnmg.IOCPNet
 		protected SocketAsyncEventArgsPool saePool;
 
 		/// <summary>
-		/// userToken 缓存集合
+		/// IOCPClient 池
 		/// </summary>
-		protected ConcurrentStack<SocketUserToken> userTokenPool;
+		protected IOCPClientPool iocpClientPool;
 
 		/// <summary>
 		/// 允许的最大连接数量
@@ -66,7 +66,7 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// 已连接的集合
 		/// </summary>
-		protected ConcurrentDictionary<Guid, SocketUserToken> connectedEntityList;
+		protected ConcurrentDictionary<Guid, IOCPClient> connectedEntityList;
 
 
 		/// <summary>
@@ -132,7 +132,8 @@ namespace ITnmg.IOCPNet
 		/// <param name="sendTimeOut">socket 发送超时时长, 以毫秒为单位</param>
 		/// <param name="receiveTimeOut">socket 接收超时时长, 以毫秒为单位</param>
 		/// <returns></returns>
-		public virtual async Task InitAsync( int maxConnectionCount, int initConnectionResourceCount, ISocketProtocol socketProtocol, int singleBufferMaxSize = 8 * 1024
+		public virtual async Task InitAsync( int maxConnectionCount, int initConnectionResourceCount
+			, ISocketProtocol socketProtocol, int singleBufferMaxSize = 8 * 1024
 			, int sendTimeOut = 10000, int receiveTimeOut = 10000 )
 		{
 			maxConnCount = maxConnectionCount;
@@ -145,19 +146,10 @@ namespace ITnmg.IOCPNet
 			{
 				semaphore = new Semaphore( maxConnCount, maxConnCount );
 				//设置初始线程数为cpu核数*2
-				connectedEntityList = new ConcurrentDictionary<Guid, SocketUserToken>( Environment.ProcessorCount * 2, maxConnCount );
+				connectedEntityList = new ConcurrentDictionary<Guid, IOCPClient>( Environment.ProcessorCount * 2, maxConnCount );
 				//读写分离, 每个socket连接需要2个SocketAsyncEventArgs.
 				saePool = new SocketAsyncEventArgsPool( initConnectionResourceCount * 2, SendAndReceiveArgsCompleted, singleBufferMaxSize );
-				userTokenPool = new ConcurrentStack<SocketUserToken>();
-
-				for ( int i = 0; i < initConnectionResourceCount; i++ )
-				{
-					SocketUserToken token = new SocketUserToken( socketProtocol, singleBufferMaxSize );
-					token.Id = Guid.NewGuid();
-					token.ReceiveArgs = saePool.Pop();
-					token.SendArgs = saePool.Pop();
-					userTokenPool.Push( token );
-				}
+				iocpClientPool = new IOCPClientPool( initConnectionResourceCount );
 			} );
 		}
 
@@ -210,7 +202,7 @@ namespace ITnmg.IOCPNet
 		{
 			try
 			{
-				if ( GetUserToken( out SocketUserToken result ) )
+				if ( GetIOCPClient( out IOCPClient result ) )
 				{
 					result.CurrentSocket = s;
 					result.ReceiveArgs.UserToken = result;
@@ -251,7 +243,7 @@ namespace ITnmg.IOCPNet
 		/// <summary>
 		/// 执行 socket 连接异常时的处理
 		/// </summary>
-		protected virtual void ConnCompletedError( Socket s, SocketError error, SocketUserToken token )
+		protected virtual void ConnCompletedError( Socket s, SocketError error, IOCPClient token )
 		{
 			try
 			{
@@ -274,7 +266,7 @@ namespace ITnmg.IOCPNet
 		/// <param name="e"></param>
 		protected virtual void SendAndReceiveArgsCompleted( object sender, SocketAsyncEventArgs e )
 		{
-			var token = e.UserToken as SocketUserToken;
+			var token = e.UserToken as IOCPClient;
 
 			if ( e.SocketError == SocketError.Success )
 			{
@@ -329,20 +321,21 @@ namespace ITnmg.IOCPNet
 		}
 
 		/// <summary>
-		/// 获取一个 userToken 资源
+		/// 获取一个 IOCPClient 资源
 		/// </summary>
 		/// <param name="token"></param>
 		/// <returns></returns>
-		protected virtual bool GetUserToken( out SocketUserToken token )
+		protected virtual bool GetIOCPClient( out IOCPClient token )
 		{
 			bool result = false;
 			token = null;
 
 			//等待10秒,如果有空余资源,接收连接,否则断开socket.
-			if ( semaphore.WaitOne( 10000 ) && !userTokenPool.TryPop( out token ) )
+			if ( semaphore.WaitOne( 10000 ) )
 			{
-				token = new SocketUserToken( SocketProtocol, singleBufferMaxSize );
+				token = iocpClientPool.Pop();
 				token.Id = Guid.NewGuid();
+				token.SocketProtocol = SocketProtocol;
 				token.ReceiveArgs = saePool.Pop();
 				token.SendArgs = saePool.Pop();
 				result = true;
@@ -355,14 +348,14 @@ namespace ITnmg.IOCPNet
 		/// 释放 token 资源, 将 token 放回池
 		/// </summary>
 		/// <param name="token">要释放的 token</param>
-		protected virtual void FreeUserToken( SocketUserToken token )
+		protected virtual void FreeUserToken( IOCPClient token )
 		{
 			if ( token != null )
 			{
-				connectedEntityList.TryRemove( token.Id, out SocketUserToken _ );
+				connectedEntityList.TryRemove( token.Id, out IOCPClient _ );
 				CloseSocket( token.CurrentSocket );
 				token.CurrentSocket = null;
-				userTokenPool.Push( token );
+				iocpClientPool.Push( token );
 				OnConnectedStatusChange( this, token.Id, false, null );
 				semaphore.Release();
 			}

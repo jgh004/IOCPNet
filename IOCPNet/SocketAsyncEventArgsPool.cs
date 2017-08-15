@@ -98,12 +98,9 @@ namespace ITnmg.IOCPNet
 				throw new ArgumentNullException( "item" );
 			}
 
-			lock ( this )
-			{
-				item.AcceptSocket = null;
-				item.RemoteEndPoint = null;
-				item.UserToken = null;
-			}
+			item.AcceptSocket = null;
+			item.RemoteEndPoint = null;
+			item.UserToken = null;
 
 			pool.Push( item );
 		}
@@ -118,10 +115,7 @@ namespace ITnmg.IOCPNet
 
 			if ( !pool.TryPop( out result ) )
 			{
-				lock ( this )
-				{
-					result = TryCreateNew();
-				}
+				result = TryCreateNew();
 			}
 
 			return result;
@@ -132,15 +126,8 @@ namespace ITnmg.IOCPNet
 		/// </summary>
 		public void Clear()
 		{
-			if ( pool != null )
-			{
-				pool.Clear();
-			}
-
-			if ( bufferManager != null )
-			{
-				bufferManager.Clear();
-			}
+			pool?.Clear();
+			bufferManager?.Clear();
 		}
 
 		/// <summary>
@@ -148,13 +135,13 @@ namespace ITnmg.IOCPNet
 		/// </summary>
 		public void Dispose()
 		{
-			this.Clear();
-			this.pool = null;
+			Clear();
+			pool = null;
 
 			if ( this.bufferManager != null )
 			{
-				this.bufferManager.Clear();
-				this.bufferManager = null;
+				bufferManager.Clear();
+				bufferManager = null;
 			}
 			
 			GC.SuppressFinalize( this );
