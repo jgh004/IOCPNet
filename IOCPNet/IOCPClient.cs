@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
-using ITnmg.IOCPNet.ProtocolInterface;
+using ITnmg.IOCPNet.Interface;
 
 namespace ITnmg.IOCPNet
 {

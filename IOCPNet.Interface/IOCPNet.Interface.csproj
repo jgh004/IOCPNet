@@ -2,24 +2,19 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <RootNamespace>ITnmg.IOCPNet</RootNamespace>
+    <RootNamespace>ITnmg.IOCPNet.Interface</RootNamespace>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>IOCPNet.Interface</PackageId>
+    <Version>0.9.1</Version>
     <Authors>ITnmg</Authors>
     <Company>ITnmg.net</Company>
-    <Version>0.9.1</Version>
     <Copyright>ITnmg.net 2017</Copyright>
-    <PackageLicenseUrl>https://github.com/jgh004/IOCPNet/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/jgh004/IOCPNet</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/jgh004/IOCPNet/blob/master/LICENSE</PackageLicenseUrl>
+    <AssemblyVersion>0.9.1.0</AssemblyVersion>
+    <FileVersion>0.9.1.0</FileVersion>
     <PackageTags>Iocp, IocpNet, Iocp.Net, Socket, AsyncSocket</PackageTags>
     <Description>A IOCP library and test tool for .Net, Still in coding.</Description>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.ServiceModel.Primitives" Version="4.4.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\IOCPNet.Interface\IOCPNet.Interface.csproj" />
-  </ItemGroup>
 
 </Project>

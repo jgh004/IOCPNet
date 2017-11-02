@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq.Expressions;
-using ITnmg.IOCPNet.ProtocolInterface;
+using ITnmg.IOCPNet.Interface;
 using System.Diagnostics;
 
 namespace ITnmg.IOCPNet

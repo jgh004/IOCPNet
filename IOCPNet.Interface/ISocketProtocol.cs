@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ITnmg.IOCPNet.ProtocolInterface
+namespace ITnmg.IOCPNet.Interface
 {
 	/// <summary>
 	/// 通信协议接口
